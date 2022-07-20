@@ -5,19 +5,27 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
-import static org.quartz.JobBuilder.*;
 import static org.quartz.TriggerBuilder.*;
 import static org.quartz.SimpleScheduleBuilder.*;
 
 public class AlertRabbit {
     public static void main(String[] args) {
 
-        try {
+        try (Connection connection = getDatabaseConnection()) {
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
-            JobDetail job = JobBuilder.newJob(Rabbit.class).build();
+            JobDataMap dataMap = new JobDataMap();
+            dataMap.put("connection", connection);
+            JobDetail job = JobBuilder
+                    .newJob(Rabbit.class)
+                    .usingJobData(dataMap)
+                    .build();
             SimpleScheduleBuilder times = simpleSchedule()
                     .withIntervalInSeconds(Integer.parseInt(countTime().getProperty("rabbit.interval")))
                     .repeatForever();
@@ -28,13 +36,23 @@ public class AlertRabbit {
             scheduler.scheduleJob(job, trigger);
         } catch (SchedulerException se) {
             se.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
         }
     }
 
     public static class Rabbit implements Job {
         @Override
-        public void execute(JobExecutionContext context) throws JobExecutionException {
-            System.out.println("Rabbit runs here ...");
+        public void execute(JobExecutionContext context)  {
+            Connection connection = (Connection) context.getJobDetail().getJobDataMap().get("store");
+            try (Statement statement = connection.createStatement()) {
+                String sql = "insert ";
+                statement.execute(sql);
+            } catch (SQLException e) {
+
+            }
         }
     }
 
@@ -46,5 +64,14 @@ public class AlertRabbit {
             e.printStackTrace();
         }
         return cfg;
+    }
+
+    public static Connection getDatabaseConnection() throws ClassNotFoundException, SQLException {
+        Properties properties = countTime();
+        Class.forName(properties.getProperty("jdbc.driver"));
+        String url = properties.getProperty("jdbc.url");
+        String login = properties.getProperty("jdbc.username");
+        String password = properties.getProperty("jdbc.password");
+        return DriverManager.getConnection(url, login, password);
     }
 }
