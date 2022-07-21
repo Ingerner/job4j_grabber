@@ -5,10 +5,7 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Properties;
 
 import static org.quartz.TriggerBuilder.*;
@@ -34,11 +31,16 @@ public class AlertRabbit {
                     .withSchedule(times)
                     .build();
             scheduler.scheduleJob(job, trigger);
+            Thread.sleep(5000);
+            scheduler.shutdown();
+            System.out.println(connection);
         } catch (SchedulerException se) {
             se.printStackTrace();
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -46,12 +48,14 @@ public class AlertRabbit {
     public static class Rabbit implements Job {
         @Override
         public void execute(JobExecutionContext context)  {
+            System.out.println("Rabbit runs here ...");
             Connection connection = (Connection) context.getJobDetail().getJobDataMap().get("store");
-            try (Statement statement = connection.createStatement()) {
-                String sql = "insert ";
-                statement.execute(sql);
-            } catch (SQLException e) {
+            try (PreparedStatement statement = connection
+                    .prepareStatement("insert into rabbit(created_date) values (?)")) {
+                    //(Statement statement = connection.createStatement()) {
+                //statement.setDate(1, );
 
+            } catch (SQLException e) {
             }
         }
     }
