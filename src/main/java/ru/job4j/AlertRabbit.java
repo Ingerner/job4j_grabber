@@ -58,7 +58,6 @@ public class AlertRabbit {
             for (Long value:store) {
                 try (PreparedStatement statement = connection
                         .prepareStatement("insert into rabbit(created_date) values (?)")) {
-                    //(Statement statement = connection.createStatement()) {
                     statement.setDate(1, new Date(System.currentTimeMillis()));
                     statement.execute();
                 } catch (SQLException e) {
