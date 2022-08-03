@@ -6,7 +6,6 @@ import org.quartz.impl.StdSchedulerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -15,20 +14,18 @@ import static org.quartz.SimpleScheduleBuilder.*;
 
 public class AlertRabbit {
     public static void main(String[] args) {
-
-        try (Connection connection = getDatabaseConnection()) {
-            List<Long> store = List.of(1L, 2L, 3L);
+        Properties properties = loadProperties();
+        try (Connection connection = getDatabaseConnection(properties)) {
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap dataMap = new JobDataMap();
             dataMap.put("connection", connection);
-            dataMap.put("store", store);
             JobDetail job = JobBuilder
                     .newJob(Rabbit.class)
                     .usingJobData(dataMap)
                     .build();
             SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(Integer.parseInt(countTime().getProperty("rabbit.interval")))
+                    .withIntervalInSeconds(Integer.parseInt(loadProperties().getProperty("rabbit.interval")))
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
@@ -54,19 +51,16 @@ public class AlertRabbit {
         public void execute(JobExecutionContext context)  {
             System.out.println("Rabbit runs here ...");
             Connection connection = (Connection) context.getJobDetail().getJobDataMap().get("connection");
-            List<Long> store = (List<Long>) context.getJobDetail().getJobDataMap().get("store");
-            for (Long value:store) {
-                try (PreparedStatement statement = connection
-                        .prepareStatement("insert into rabbit(created_date) values (?)")) {
-                    statement.setDate(1, new Date(System.currentTimeMillis()));
-                    statement.execute();
-                } catch (SQLException e) {
-                }
+            try (PreparedStatement statement = connection
+                    .prepareStatement("insert into rabbit(created_date) values (?)")) {
+                statement.setDate(1, new Date(System.currentTimeMillis()));
+                statement.execute();
+            } catch (SQLException e) {
             }
         }
     }
 
-    public static Properties countTime() {
+    public static Properties loadProperties() {
         Properties cfg = new Properties();
         try (InputStream in = Rabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
             cfg.load(in);
@@ -76,8 +70,7 @@ public class AlertRabbit {
         return cfg;
     }
 
-    public static Connection getDatabaseConnection() throws ClassNotFoundException, SQLException {
-        Properties properties = countTime();
+    public static Connection getDatabaseConnection(Properties properties) throws ClassNotFoundException, SQLException {
         Class.forName(properties.getProperty("jdbc.driver"));
         String url = properties.getProperty("jdbc.url");
         String login = properties.getProperty("jdbc.username");
