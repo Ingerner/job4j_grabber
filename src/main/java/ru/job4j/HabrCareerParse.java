@@ -25,7 +25,7 @@ public class HabrCareerParse {
 
             Element dateElement = row.select(".vacancy-card__date").first();
             Element timeElement = dateElement.child(0);
-            String vacancyDate = dateElement.text();
+            String vacancyDate = timeElement.attr("datetime");
 
             String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
             System.out.printf("%s %s %s %n", vacancyName,  link, vacancyDate);
