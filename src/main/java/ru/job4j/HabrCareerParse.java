@@ -12,10 +12,19 @@ import static java.time.LocalDateTime.parse;
 
 public class HabrCareerParse {
 
-    private static final String SOURCE_LINK =  "https://career.habr.com";
+    private static final String SOURCE_LINK =  "https://career.habr.com"; //https://career.habr.com/vacancies/1000107154
 
-    //private static final String PAGE_LINK = String.format("%s/vacancies/java_developer", SOURCE_LINK);
     private static final String PAGE_LINK = "%s/vacancies/java_developer?page=%s";
+
+    private String retrieveDescription(String link) throws IOException {
+        String linkFormat = "%s" + link;
+        String employee = String.format(linkFormat, SOURCE_LINK);
+        Connection connection = Jsoup.connect(employee);
+        Document document = connection.get();
+        Elements rows = document
+                .select(".basic-section basic-section--appearance-vacancy-description");
+        return null;
+    }
 
     public static void main(String[] args) throws IOException {
         for (int i = 1; i <= 5; i++) {
