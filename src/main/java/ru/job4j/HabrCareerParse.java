@@ -18,8 +18,8 @@ public class HabrCareerParse {
 
     private static String retrieveDescription(String link) throws IOException {
         String linkFormat = "%s" + link;
-        String employee = String.format(linkFormat, SOURCE_LINK);
-        Connection connection = Jsoup.connect(employee);
+        String vacancy = String.format(linkFormat, SOURCE_LINK);
+        Connection connection = Jsoup.connect(vacancy);
         Document document = connection.get();
         Element row = document.select(".basic-section--appearance-vacancy-description").first();
         Element description = row.select(".collapsible-description").first();
