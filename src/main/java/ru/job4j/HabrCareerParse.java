@@ -7,7 +7,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,11 +20,12 @@ public class HabrCareerParse implements Parse {
 
     private final DateTimeParser dateTimeParser;
 
-    private static final int PAGE_NAMBER = 5;
+    private static final int PAGE_NUMBER = 5;
 
     public HabrCareerParse(DateTimeParser dateTimeParser) {
         this.dateTimeParser = dateTimeParser;
     }
+
     public Post post(Element element) throws IOException {
         Element titleElement = element.select(".vacancy-card__title").first();
         Element linkElement = titleElement.child(0);
@@ -35,17 +35,20 @@ public class HabrCareerParse implements Parse {
         Element timeElement = dateElement.child(0);
         String vacancyDate = timeElement.attr("datetime");
         String linkVacancy = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-        HabrCareerDateTimeParser dateTimeParser = new HabrCareerDateTimeParser();
-        return new Post(vacancyName, linkVacancy,
-                retrieveDescription(linkVacancy), new HabrCareerParse()));
+        return new Post(
+                vacancyName,
+                linkVacancy,
+                retrieveDescription(linkVacancy),
+                dateTimeParser.parse(vacancyDate)
+        );
     }
 
     @Override
     public List<Post> list(String link) throws IOException {
         List<Post> posts = new ArrayList<>();
-        for (int i = 1; i <= PAGE_NAMBER; i++) {
+        for (int i = 1; i <= PAGE_NUMBER; i++) {
             String url = String.format(PAGE_LINK, SOURCE_LINK, i);
-            String pageLink = link.replaceAll("=s", Integer.toString(i));
+            String pageLink = link.substring(0, link.length() - 1) + Integer.toString(i);
             Connection connection = Jsoup.connect(pageLink);
             Document document = connection.get();
             Elements rows = document.select(".vacancy-card__inner");
@@ -68,24 +71,10 @@ public class HabrCareerParse implements Parse {
     }
 
     public static void main(String[] args) throws IOException {
-        for (int i = 1; i <= 5; i++) {
-            String url = String.format(PAGE_LINK, SOURCE_LINK, i);
-            HabrCareerDateTimeParser parser = new HabrCareerDateTimeParser();
-            Connection connection = Jsoup.connect(url);
-            Document document = connection.get();
-            Elements rows = document.select(".vacancy-card__inner");
-            rows.forEach(row -> {
-                Element titleElement = row.select(".vacancy-card__title").first();
-                Element linkElement = titleElement.child(0);
-                String vacancyName = titleElement.text();
-
-                Element dateElement = row.select(".vacancy-card__date").first();
-                Element timeElement = dateElement.child(0);
-                String vacancyDate = timeElement.attr("datetime");
-                String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
-
-                System.out.printf("%s %s %s %n", vacancyName,  link, parser.parse(vacancyDate));
-            });
-        }
+        HabrCareerParse habrCareerParse = new HabrCareerParse(new HabrCareerDateTimeParser());
+        List<String> posts = habrCareerParse.list("https://career.habr.com/vacancies/java_developer?page=1").stream().map(Post::toString).toList();
+        String joinedPosts = String.join("\n", posts);
+        System.out.println(joinedPosts);
     }
 }
+
