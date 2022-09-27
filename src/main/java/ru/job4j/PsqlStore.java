@@ -3,6 +3,7 @@ package ru.job4j;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -41,6 +42,24 @@ public class PsqlStore implements Store, AutoCloseable {
 
     @Override
     public List<Post> getAll() {
+        List<Post> listPost = new ArrayList<>();
+        try(PreparedStatement st = cnn.prepareStatement(
+                "select * from posts")) {
+           try(ResultSet resultSet = st.executeQuery()) {
+               while (resultSet.next()) {
+                   listPost.add(new Post(
+                           resultSet.getInt("id"),
+                           resultSet.getString("name"),
+                           resultSet.getString("link"),
+                           resultSet.getString("description"),
+                           resultSet.getTimestamp("created").toLocalDateTime()
+                   ));
+               }
+           }
+
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
         return null;
     }
 
@@ -60,6 +79,7 @@ public class PsqlStore implements Store, AutoCloseable {
         }
         try(PsqlStore psql = new PsqlStore(pr)) {
             listPost.forEach(psql :: save);
+            psql.getAll().forEach(System.out::println);
         }  catch (Exception e) {
             e.printStackTrace();
         }
