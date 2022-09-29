@@ -3,7 +3,6 @@ package ru.job4j;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -24,11 +23,17 @@ public class PsqlStore implements Store, AutoCloseable {
 
     }
 
+    @Override
+    public void close() throws Exception {
+        if (cnn != null) {
+            cnn.close();
+        }
+    }
 
     @Override
     public void save(Post post) {
         try(PreparedStatement st = cnn.prepareStatement(
-                "insert into posts(name, description, link, created) values(?, ?, ?, ?)")) {
+                "insert into posts(name, description, link, created) values(?, ?, ?, ?);")) {
             st.setString(1, post.getTitle());
             st.setString(2, post.getDescription());
             st.setString(3, post.getLink());
@@ -37,35 +42,52 @@ public class PsqlStore implements Store, AutoCloseable {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-
     }
 
     @Override
     public List<Post> getAll() {
-        List<Post> listPost = new ArrayList<>();
-        try(PreparedStatement st = cnn.prepareStatement(
-                "select * from posts")) {
-           try(ResultSet resultSet = st.executeQuery()) {
-               while (resultSet.next()) {
-                   listPost.add(new Post(
-                           resultSet.getInt("id"),
-                           resultSet.getString("name"),
-                           resultSet.getString("link"),
-                           resultSet.getString("description"),
-                           resultSet.getTimestamp("created").toLocalDateTime()
-                   ));
-               }
-           }
-
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        List<Post> posts = new ArrayList<>();
+        try (PreparedStatement statement = cnn.prepareStatement("select * from posts;")) {
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    posts.add(new Post(
+                            resultSet.getInt("id"),
+                            resultSet.getString("name"),
+                            resultSet.getString("link"),
+                            resultSet.getString("description"),
+                            resultSet.getTimestamp("created").toLocalDateTime()
+                    ));
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        return null;
+        return posts;
     }
 
     @Override
     public Post findById(int id) {
-        return null;
+        Post post = null;
+        try (PreparedStatement statement =
+                     cnn.prepareStatement("select * from posts where id = ?;")) {
+            statement.setInt(1, id);
+               try(ResultSet rsl = statement.executeQuery()) {
+               if (rsl.next()) {
+                   post = new Post(
+                           rsl.getInt("id"),
+                           rsl.getString("name"),
+                           rsl.getString("link"),
+                           rsl.getString("description"),
+                           rsl.getTimestamp("created").toLocalDateTime()
+
+                   );
+                   return post;
+               }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return post;
     }
 
     public static void main(String[] args) {
@@ -78,16 +100,13 @@ public class PsqlStore implements Store, AutoCloseable {
             e.printStackTrace();
         }
         try(PsqlStore psql = new PsqlStore(pr)) {
-            listPost.forEach(psql :: save);
-            psql.getAll().forEach(System.out::println);
+//            listPost.forEach(psql :: save);
+//             psql.getAll().forEach(System.out::println);
+            System.out.println("id = 100 ----> " +psql.findById(100));
         }  catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
-    @Override
-    public void close() throws Exception {
 
-    }
 }
