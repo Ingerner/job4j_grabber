@@ -32,7 +32,7 @@ public class PsqlStore implements Store, AutoCloseable {
 
     @Override
     public void save(Post post) {
-        try(PreparedStatement st = cnn.prepareStatement(
+        try (PreparedStatement st = cnn.prepareStatement(
                 "insert into posts(name, description, link, created) values(?, ?, ?, ?);")) {
             st.setString(1, post.getTitle());
             st.setString(2, post.getDescription());
@@ -71,7 +71,7 @@ public class PsqlStore implements Store, AutoCloseable {
         try (PreparedStatement statement =
                      cnn.prepareStatement("select * from posts where id = ?;")) {
             statement.setInt(1, id);
-               try(ResultSet rsl = statement.executeQuery()) {
+               try (ResultSet rsl = statement.executeQuery()) {
                if (rsl.next()) {
                    post = new Post(
                            rsl.getInt("id"),
@@ -79,9 +79,7 @@ public class PsqlStore implements Store, AutoCloseable {
                            rsl.getString("link"),
                            rsl.getString("description"),
                            rsl.getTimestamp("created").toLocalDateTime()
-
                    );
-                   return post;
                }
             }
         } catch (Exception e) {
@@ -94,19 +92,17 @@ public class PsqlStore implements Store, AutoCloseable {
         HabrCareerParse habrCareerParse = new HabrCareerParse(new HabrCareerDateTimeParser());
         List<Post> listPost = habrCareerParse.list("https://career.habr.com/vacancies/java_developer?page=");
         Properties pr = new Properties();
-        try(InputStream in = PsqlStore.class.getClassLoader().getResourceAsStream("aggregator.properties")) {
+        try (InputStream in = PsqlStore.class.getClassLoader().getResourceAsStream("aggregator.properties")) {
             pr.load(in);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        try(PsqlStore psql = new PsqlStore(pr)) {
-//            listPost.forEach(psql :: save);
-//             psql.getAll().forEach(System.out::println);
-            System.out.println("id = 100 ----> " +psql.findById(100));
+        try (PsqlStore psql = new PsqlStore(pr)) {
+            listPost.forEach(psql :: save);
+             psql.getAll().forEach(System.out::println);
+            System.out.println("id = 5 ----> " + psql.findById(5));
         }  catch (Exception e) {
             e.printStackTrace();
         }
     }
-
-
 }
