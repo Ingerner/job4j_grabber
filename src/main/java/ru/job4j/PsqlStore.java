@@ -33,7 +33,8 @@ public class PsqlStore implements Store, AutoCloseable {
     @Override
     public void save(Post post) {
         try (PreparedStatement st = cnn.prepareStatement(
-                "insert into posts(name, description, link, created) values(?, ?, ?, ?);")) {
+                "insert into posts(name, description, link, created) values(?, ?, ?, ?)"
+                        + "on conflict (link) do nothing")) {
             st.setString(1, post.getTitle());
             st.setString(2, post.getDescription());
             st.setString(3, post.getLink());
@@ -50,13 +51,7 @@ public class PsqlStore implements Store, AutoCloseable {
         try (PreparedStatement statement = cnn.prepareStatement("select * from posts;")) {
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
-                    posts.add(new Post(
-                            resultSet.getInt("id"),
-                            resultSet.getString("name"),
-                            resultSet.getString("link"),
-                            resultSet.getString("description"),
-                            resultSet.getTimestamp("created").toLocalDateTime()
-                    ));
+                    posts.add(newPost(resultSet));
                 }
             }
         } catch (Exception e) {
@@ -73,19 +68,24 @@ public class PsqlStore implements Store, AutoCloseable {
             statement.setInt(1, id);
                try (ResultSet rsl = statement.executeQuery()) {
                if (rsl.next()) {
-                   post = new Post(
-                           rsl.getInt("id"),
-                           rsl.getString("name"),
-                           rsl.getString("link"),
-                           rsl.getString("description"),
-                           rsl.getTimestamp("created").toLocalDateTime()
-                   );
+                   post = newPost(rsl);
                }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
         return post;
+    }
+
+    private Post newPost(ResultSet res) throws SQLException {
+        return new Post(
+                res.getInt(1),
+                res.getString(2),
+                res.getString(4),
+                res.getString(3),
+                res.getTimestamp(5).toLocalDateTime()
+
+        );
     }
 
     public static void main(String[] args) {
