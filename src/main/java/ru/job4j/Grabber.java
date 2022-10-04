@@ -53,11 +53,12 @@ public class Grabber implements Grab {
 
         @Override
         public void execute(JobExecutionContext context) throws JobExecutionException {
+            final String LINK = "https://career.habr.com/vacancies/java_developer?page=";
             JobDataMap map = context.getJobDetail().getJobDataMap();
             Store store = (Store) map.get("store");
             Parse parse = (Parse) map.get("parse");
             try {
-                parse.list("https://career.habr.com/vacancies/java_developer?page=");
+                parse.list(LINK).forEach(store :: save);
             } catch (IOException e) {
                 e.printStackTrace();
             }
